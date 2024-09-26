@@ -159,6 +159,7 @@ var
   s: string;
   Failed: Integer;
   MissingCount: Integer;
+  DiffCount: Integer;
 
 begin
   memoReport.Visible := FALSE;
@@ -281,7 +282,8 @@ begin
     do begin    // Iterate
       if (lboxSource.Items[Loop] = lboxDest.Items[Loop])
       then begin
-        memoReport.Lines.Add(lboxSource.Items[Loop] + ' : Different');
+        DiffCount := (TStringList(lboxSource.Items.Objects[Loop])).Count;
+        memoReport.Lines.Add(lboxSource.Items[Loop] + ' : ' + IntToStr(DiffCount) + ' Differences');
         if Assigned(lboxSource.Items.Objects[Loop]) then
           memoReport.Lines.Add(DiffDetails(TStringList(lboxSource.Items.Objects[Loop])));
       end
