@@ -61,12 +61,7 @@ const
   DIFF = 3;
   MISSING = '<n/a>';
 
-var
-  Loop, Index : Integer;
-  s: string;
-  Failed: Integer;
-
-  function CompareFiles(fn1, fn2: string) : Integer;
+  function CompareFiles(fn1, fn2: string;Index: Integer) : Integer;
   var
     fs1, fs2 : TFileStream;
     Buff1, Buff2 : array[1..4096] of byte;
@@ -88,7 +83,7 @@ var
           Result := SAME;
           pbarFile.Position := 0;
           pbarFile.Max := fs1.Size;
-          while (fs1.Position < fs1.Size) and 
+          while (fs1.Position < fs1.Size) and
                ((Result = SAME) or (cbDiffDetails.Checked))
           do begin
             Application.ProcessMessages;
@@ -117,15 +112,53 @@ var
     finally
       fs1.Free;
       If (cbDiffDetails.Checked) and (slFileDetails.Count > 0) then begin
-        slFileDetails.SaveToFile(ExtractFilePath(ParamStr(0)) + ChangeFileExt(fn1, '.txt'))
-      end;
-      FreeAndNil(slFileDetails);
+        lboxSource.Items.Objects[Index] := slFileDetails;
+//        slFileDetails.SaveToFile(ExtractFilePath(ParamStr(0)) + ChangeFileExt(fn1, '.txt'))
+        slFileDetails := TStringList.Create;
+      end
+      else FreeAndNil(slFileDetails);
       pbarFile.Position := 0;
     end;
   end;
 
 
-var MissingCount: Integer;
+  function DiffDetails(DeetsList: TStringList): String;
+  var CurrFileIndex, LastFileIndex,
+      BlockStart, BlockEnd, BlockCount,
+      TotalCount: Integer;
+      Index: Integer;
+      ResultList: TStringList;
+  begin
+    Index := 0;
+    BlockStart := 0;
+    BlockEnd   := 0;
+    BlockCount := 0;
+    TotalCount := 0;
+    LastFileIndex := 0;
+    ResultList := TStringList.Create;
+    while Index < DeetsList.Count do begin
+      CurrFileIndex := StrToInt('$' + Copy(DeetsList[Index], 1, 10));
+      if (CurrFileIndex > (LastFileIndex + 1)) then begin
+        if BlockCount > 1 then
+          ResultList.Add(Format('BlockStart: %d, BlockCount: %d', [BlockStart, BlockCount]));
+        BlockStart := CurrFileIndex;
+        BlockCount := 1;
+      end
+      else begin
+        Inc(BlockCount);
+      end;
+      LastFileIndex := CurrFileIndex;
+      Inc(TotalCount);
+      Inc(Index);
+    end;
+    Result := ResultList.Text;
+  end;
+
+var
+  Loop, Index : Integer;
+  s: string;
+  Failed: Integer;
+  MissingCount: Integer;
 
 begin
   memoReport.Visible := FALSE;
@@ -226,7 +259,7 @@ begin
       then begin
         statusbar.panels[0].text := 'Comparing: ' + lboxSource.Items[Loop];
         Application.ProcessMessages;
-        if (CompareFiles(lboxSource.Items[Loop],lboxDest.Items[Loop]) = SAME)
+        if (CompareFiles(lboxSource.Items[Loop],lboxDest.Items[Loop],Loop) = SAME)
         then begin
           // same, remove from the list
           lboxSource.Items.Delete(Loop);
@@ -247,7 +280,11 @@ begin
     for Loop := 0 to lboxSource.Items.Count - 1
     do begin    // Iterate
       if (lboxSource.Items[Loop] = lboxDest.Items[Loop])
-      then memoReport.Lines.Add(lboxSource.Items[Loop] + ' : Different')
+      then begin
+        memoReport.Lines.Add(lboxSource.Items[Loop] + ' : Different');
+        if Assigned(lboxSource.Items.Objects[Loop]) then
+          memoReport.Lines.Add(DiffDetails(TStringList(lboxSource.Items.Objects[Loop])));
+      end
       else begin
         if (lboxSource.Items[Loop] = MISSING)
         then memoReport.Lines.Add(edPath1.Text + ' is missing file: ' + lboxDest.Items[Loop])
@@ -295,7 +332,7 @@ var xDir: String;
 begin
   Result := CurrDir;
   xDir := ExtractFilePath(Paramstr(0));
-  if FileCtrl.SelectDirectory(CurrDir, [sdAllowCreate, sdPerformCreate, sdPrompt], 0) then
+  if FileCtrl.SelectDirectory(xDir, [sdAllowCreate, sdPerformCreate, sdPrompt], 0) then
     Result := xDir;
 end;
 
