@@ -282,8 +282,10 @@ begin
     do begin    // Iterate
       if (lboxSource.Items[Loop] = lboxDest.Items[Loop])
       then begin
-        DiffCount := (TStringList(lboxSource.Items.Objects[Loop])).Count;
-        memoReport.Lines.Add(lboxSource.Items[Loop] + ' : ' + IntToStr(DiffCount) + ' Differences');
+        if Assigned(lboxSource.Items.Objects[Loop]) then begin
+          DiffCount := (TStringList(lboxSource.Items.Objects[Loop])).Count;
+          memoReport.Lines.Add(lboxSource.Items[Loop] + ' : ' + IntToStr(DiffCount) + ' Differences');
+        end;
         if Assigned(lboxSource.Items.Objects[Loop]) then
           memoReport.Lines.Add(DiffDetails(TStringList(lboxSource.Items.Objects[Loop])));
       end
